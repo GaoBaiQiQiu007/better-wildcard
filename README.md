@@ -1,2 +1,5 @@
 # better-wildcard
 A better wildcard
+这是一个批量发物品插件，可以让管理员快速给单个玩家、多个玩家、或全体玩家发物品，支持排除指定玩家、给自己发、指定词缀等操作。
+/wgive 巴拉巴拉
+/wgbox 巴拉巴拉
