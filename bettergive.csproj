@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <AssemblyName>bettergive</AssemblyName>
+    <RootNamespace>EnhancedWildcardGivePlugin</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <NoWarn>$(NoWarn);CS1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      将下列 HintPath 替换为你本地 TShock 服务器目录的实际路径。
+      例如：
+        - TShockAPI.dll 位于 ServerPlugins/ 目录
+        - Terraria.dll / OTAPI.dll 位于根目录
+        - TerrariaServer.dll 位于根目录
+    -->
+    <Reference Include="TShockAPI">
+      <HintPath>..\..\TShock\ServerPlugins\TShockAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Terraria">
+      <HintPath>..\..\TShock\Terraria.exe</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="TerrariaServer">
+      <HintPath>..\..\TShock\TerrariaServer.exe</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="OTAPI">
+      <HintPath>..\..\TShock\OTAPI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

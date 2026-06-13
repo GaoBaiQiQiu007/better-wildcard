@@ -17,6 +17,15 @@ namespace EnhancedWildcardGivePlugin
 
         private const string GivePermission = "pw.give";
         private const string GBoxPermission = "pw.gbox";
+        private const string LogPrefix = "[bettergive]";
+
+        private enum TokenResolveStatus { Ok, Ambiguous, NotFound }
+
+        private struct TokenResolveResult
+        {
+            public TokenResolveStatus Status;
+            public List<TSPlayer> Players;
+        }
 
         public EnhancedWildcardGivePlugin(Main game) : base(game)
         {
@@ -73,6 +82,7 @@ namespace EnhancedWildcardGivePlugin
                 }
             }
 
+            TShock.Log.Info($"{LogPrefix} 执行者={args.Player.Name}({args.Player.Index}) 命令=/wgive 物品={item.Name}({item.type}) 数量={amount} 发放成功人数={success}/{targets.Count}");
             args.Player.SendSuccessMessage($"已向 {success} 名玩家发放 {item.Name} x{amount}");
         }
 
@@ -137,6 +147,9 @@ namespace EnhancedWildcardGivePlugin
                 }
             }
 
+            string prefixPart = prefix > 0 ? $" 词缀={prefix}" : string.Empty;
+            TShock.Log.Info($"{LogPrefix} 执行者={args.Player.Name}({args.Player.Index}) 命令=/wgbox 物品={item.Name}({item.type}) 数量={amount}{prefixPart} 发放成功人数={success}/{targets.Count}");
+
             if (prefix > 0)
                 args.Player.SendSuccessMessage($"已向 {success} 名玩家发放 {item.Name} x{amount}，词缀: {prefix}");
             else
@@ -189,6 +202,7 @@ namespace EnhancedWildcardGivePlugin
 
             HashSet<TSPlayer> include = new HashSet<TSPlayer>();
             HashSet<TSPlayer> exclude = new HashSet<TSPlayer>();
+            bool hasAmbiguousMatch = false;
 
             string[] parts = targetText.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -204,20 +218,32 @@ namespace EnhancedWildcardGivePlugin
                 if (string.IsNullOrWhiteSpace(actualToken))
                     continue;
 
-                List<TSPlayer> resolved = ResolveTargetToken(sender, actualToken);
-                if (resolved.Count == 0)
+                TokenResolveResult result = ResolveTargetToken(sender, actualToken);
+                if (result.Status == TokenResolveStatus.Ambiguous)
+                {
+                    hasAmbiguousMatch = true;
+                    continue;
+                }
+
+                if (result.Status == TokenResolveStatus.NotFound || result.Players.Count == 0)
                     continue;
 
                 if (isExclude)
                 {
-                    foreach (TSPlayer player in resolved)
+                    foreach (TSPlayer player in result.Players)
                         exclude.Add(player);
                 }
                 else
                 {
-                    foreach (TSPlayer player in resolved)
+                    foreach (TSPlayer player in result.Players)
                         include.Add(player);
                 }
+            }
+
+            if (hasAmbiguousMatch)
+            {
+                sender.SendErrorMessage("目标解析失败：存在重名玩家，请使用精确的玩家名或玩家 ID。");
+                return false;
             }
 
             if (include.Count == 0)
@@ -241,9 +267,13 @@ namespace EnhancedWildcardGivePlugin
             return true;
         }
 
-        private List<TSPlayer> ResolveTargetToken(TSPlayer sender, string token)
+        private TokenResolveResult ResolveTargetToken(TSPlayer sender, string token)
         {
-            List<TSPlayer> result = new List<TSPlayer>();
+            TokenResolveResult result = new TokenResolveResult
+            {
+                Status = TokenResolveStatus.Ok,
+                Players = new List<TSPlayer>()
+            };
 
             if (token == "*" ||
                 token.Equals("all", StringComparison.OrdinalIgnoreCase) ||
@@ -252,7 +282,7 @@ namespace EnhancedWildcardGivePlugin
                 foreach (TSPlayer player in TShock.Players)
                 {
                     if (player != null && player.Active)
-                        result.Add(player);
+                        result.Players.Add(player);
                 }
 
                 return result;
@@ -261,7 +291,7 @@ namespace EnhancedWildcardGivePlugin
             if (token.Equals("me", StringComparison.OrdinalIgnoreCase))
             {
                 if (sender != null && sender.Active)
-                    result.Add(sender);
+                    result.Players.Add(sender);
 
                 return result;
             }
@@ -271,18 +301,20 @@ namespace EnhancedWildcardGivePlugin
             if (found == null || found.Count == 0)
             {
                 sender.SendErrorMessage($"未找到玩家: {token}");
+                result.Status = TokenResolveStatus.NotFound;
                 return result;
             }
 
             if (found.Count > 1)
             {
                 sender.SendMultipleMatchError(found.Select(p => $"{p.Name} ({p.Index})"));
+                result.Status = TokenResolveStatus.Ambiguous;
                 return result;
             }
 
             TSPlayer matched = found[0];
             if (matched != null && matched.Active)
-                result.Add(matched);
+                result.Players.Add(matched);
 
             return result;
         }
@@ -297,8 +329,9 @@ namespace EnhancedWildcardGivePlugin
                 target.GiveItem(itemType, stack, prefix);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                TShock.Log.Error($"{LogPrefix} 向玩家 {target.Name}({target.Index}) 发放物品失败: itemType={itemType}, stack={stack}, prefix={prefix}, 错误={ex.Message}");
                 return false;
             }
         }
