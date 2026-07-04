@@ -3,6 +3,7 @@
 > **版本**：3.0.1.0
 > **作者**：ak
 > **类型**：TShock 服务器插件（Terraria）
+> **平台**：.NET 8.0 / TShock 6.1（OTAPI 2.1 兼容）
 
 ---
 
@@ -10,17 +11,18 @@
 
 `better-wildcard`（插件显示名：`bettergive`）是一个为 **TShock/Terraria** 服务器编写的批量发物品插件。它允许管理员通过简单的命令语法，快速向**单个玩家**、**多个玩家**、**全体在线玩家**发放物品，并且支持**排除指定玩家**、**给自己发物品**、**使用词缀（prefix）** 等进阶操作。
 
-插件同时带有完整的**审计日志**与**异常记录**，便于服务器管理员追溯发放行为。
+插件基于 **.NET 8.0** 与 **TShock 6.1** 开发，可跨平台部署于 Windows / Linux / macOS 等服务端环境，详见 [README.md](README.md#应用环境)。插件同时带有完整的**审计日志**与**异常记录**，便于服务器管理员追溯发放行为。
 
 ```
 /workspace
 ├── .github/
 │   └── workflows/
-│       └── dotnet-desktop.yml   # GitHub Actions CI：.NET 类库构建
+│       └── dotnet-desktop.yml           # GitHub Actions CI：.NET 类库构建
 ├── LICENSE
-├── README.md                     # 项目简介与命令示例
-├── bettergive.cs                 # 插件核心源代码（所有逻辑）
-└── bettergive.csproj             # .NET 工程文件（类库，net6.0）
+├── README.md                             # 项目简介与命令示例
+├── CODE_WIKI.md                          # 代码 Wiki
+├── EnhancedWildcardGivePlugin.cs        # 插件核心源代码（所有逻辑）
+└── bettergive.csproj                     # .NET 工程文件（类库，net8.0）
 ```
 
 ---
@@ -32,8 +34,8 @@
 | 层级 | 说明 | 对应模块 |
 | --- | --- | --- |
 | **插件宿主层** | 由 Terraria / TShock 运行时提供，负责加载 `TerrariaPlugin` 派生类并派发命令事件。 | `TerrariaPlugin` 基类、`TShockAPI`、`TerrariaApi.Server` |
-| **命令注册层** | 插件自身负责向 `TShockAPI.Commands.ChatCommands` 注册命令处理器，并在卸载时清理。 | [EnhancedWildcardGivePlugin.Initialize](file:///workspace/bettergive.cs#L34-L38)、[Dispose](file:///workspace/bettergive.cs#L40-L49) |
-| **业务逻辑层** | 命令解析、物品解析、目标玩家解析、物品发放、反馈与日志。 | [WGiveCommand](file:///workspace/bettergive.cs#L51-L87)、[WGBoxCommand](file:///workspace/bettergive.cs#L89-L157)、[TryResolveSingleItem](file:///workspace/bettergive.cs#L165-L191)、[TryResolveTargets](file:///workspace/bettergive.cs#L193-L268)、[ResolveTargetToken](file:///workspace/bettergive.cs#L270-L320)、[TryGiveItem](file:///workspace/bettergive.cs#L322-L337) |
+| **命令注册层** | 插件自身负责向 `TShockAPI.Commands.ChatCommands` 注册命令处理器，并在卸载时清理。 | [EnhancedWildcardGivePlugin.Initialize](file:///workspace/EnhancedWildcardGivePlugin.cs#L34-L38)、[Dispose](file:///workspace/EnhancedWildcardGivePlugin.cs#L40-L49) |
+| **业务逻辑层** | 命令解析、物品解析、目标玩家解析、物品发放、反馈与日志。 | [WGiveCommand](file:///workspace/EnhancedWildcardGivePlugin.cs#L51-L87)、[WGBoxCommand](file:///workspace/EnhancedWildcardGivePlugin.cs#L89-L157)、[TryResolveSingleItem](file:///workspace/EnhancedWildcardGivePlugin.cs#L165-L191)、[TryResolveTargets](file:///workspace/EnhancedWildcardGivePlugin.cs#L193-L268)、[ResolveTargetToken](file:///workspace/EnhancedWildcardGivePlugin.cs#L270-L320)、[TryGiveItem](file:///workspace/EnhancedWildcardGivePlugin.cs#L322-L337) |
 
 ### 2.1 核心流程图（以 `/wgive` 为例）
 
@@ -68,7 +70,7 @@
 
 ### 3.1 插件入口模块
 
-- **文件**：[bettergive.cs](file:///workspace/bettergive.cs#L1-L339)
+- **文件**：[EnhancedWildcardGivePlugin.cs](file:///workspace/EnhancedWildcardGivePlugin.cs#L1-L339)
 - **主要类型**：`EnhancedWildcardGivePlugin`（继承自 `TerrariaPlugin`）
 - **职责**：
   - 在 `Initialize()` 中向 TShock 注册 `/wgive` 与 `/wgbox` 两个命令。
@@ -79,26 +81,26 @@
 
 ### 3.2 命令处理模块
 
-- **[WGiveCommand](file:///workspace/bettergive.cs#L51-L87)**
+- **[WGiveCommand](file:///workspace/EnhancedWildcardGivePlugin.cs#L51-L87)**
   - 命令：`/wgive <物品ID或名称...> <目标> <数量>`
   - 语法约定：**最后一段**为数量，**倒数第二段**为目标，其余全部拼起来做物品名（因此物品名可带空格）。
   - 成功发放后写入审计日志：`TShock.Log.Info(...)`。
 
-- **[WGBoxCommand](file:///workspace/bettergive.cs#L89-L157)**
+- **[WGBoxCommand](file:///workspace/EnhancedWildcardGivePlugin.cs#L89-L157)**
   - 命令：`/wgbox <目标> <物品ID或名称...> <数量> [词缀]`
   - 语法约定：**第一段**为目标；**可选的最后一段**若能被 `byte.TryParse` 成功则视为词缀（prefix），否则数量位于最后一段。
   - 成功发放后写入审计日志（含词缀信息）。
 
 ### 3.3 输入解析模块
 
-- **[TryParsePositiveInt](file:///workspace/bettergive.cs#L159-L163)**：通用的"必须为 >0 的正整数"解析器，用于校验数量。
-- **[TryResolveSingleItem](file:///workspace/bettergive.cs#L165-L191)**：使用 `TShock.Utils.GetItemByIdOrName` 解析物品文本，空、无匹配、多匹配都会给出错误消息并返回 `false`。
-- **[TryResolveTargets](file:///workspace/bettergive.cs#L193-L268)**：以英文逗号 `,` 分割目标串，分别加入「包含集合」或「排除集合」（以 `!` 开头为排除）。通过 `TokenResolveResult.Status` 识别 `Ambiguous` 状态，遇到重名则立即中止并给出明确提示。
-- **[ResolveTargetToken](file:///workspace/bettergive.cs#L270-L320)**：单个目标 token 的解析，返回 `TokenResolveResult`（`Ok` / `Ambiguous` / `NotFound`）。识别 `*`、`all`、`@a`、`me` 以及普通玩家名/ID。
+- **[TryParsePositiveInt](file:///workspace/EnhancedWildcardGivePlugin.cs#L159-L163)**：通用的"必须为 >0 的正整数"解析器，用于校验数量。
+- **[TryResolveSingleItem](file:///workspace/EnhancedWildcardGivePlugin.cs#L165-L191)**：使用 `TShock.Utils.GetItemByIdOrName` 解析物品文本，空、无匹配、多匹配都会给出错误消息并返回 `false`。
+- **[TryResolveTargets](file:///workspace/EnhancedWildcardGivePlugin.cs#L193-L268)**：以英文逗号 `,` 分割目标串，分别加入「包含集合」或「排除集合」（以 `!` 开头为排除）。通过 `TokenResolveResult.Status` 识别 `Ambiguous` 状态，遇到重名则立即中止并给出明确提示。
+- **[ResolveTargetToken](file:///workspace/EnhancedWildcardGivePlugin.cs#L270-L320)**：单个目标 token 的解析，返回 `TokenResolveResult`（`Ok` / `Ambiguous` / `NotFound`）。识别 `*`、`all`、`@a`、`me` 以及普通玩家名/ID。
 
 ### 3.4 发放与反馈模块
 
-- **[TryGiveItem](file:///workspace/bettergive.cs#L322-L337)**：对单个玩家调用 `TSPlayer.GiveItem(itemType, stack, prefix)`。`try/catch (Exception ex)` 捕获异常，写入 `TShock.Log.Error`，返回 `false`，防止单个异常玩家打断整个批量发放流程。
+- **[TryGiveItem](file:///workspace/EnhancedWildcardGivePlugin.cs#L322-L337)**：对单个玩家调用 `TSPlayer.GiveItem(itemType, stack, prefix)`。`try/catch (Exception ex)` 捕获异常，写入 `TShock.Log.Error`，返回 `false`，防止单个异常玩家打断整个批量发放流程。
 - 命令级反馈：在命令函数末尾，对每个目标发送 `SendSuccessMessage`，并向命令执行者发送含成功人数的汇总消息。
 - **审计日志**（`TShock.Log.Info`）：记录执行者、命令、物品、数量、词缀、成功人数/总人数，便于服务器管理员追溯。
 
@@ -132,7 +134,7 @@ public class EnhancedWildcardGivePlugin : TerrariaPlugin
 }
 ```
 
-- **API 版本**：`2.1`，表明该插件面向 **TShock 5.x / OTAPI 2.1** 版本设计。
+- **API 版本**：`2.1`，表明该插件面向 **TShock 6.1 / OTAPI 2.1** 版本设计。
 - **`TokenResolveStatus` / `TokenResolveResult`**：新增的状态传递机制。将"未找到目标"与"目标重名"两种失败分开处理，避免向玩家给出误导性的"未找到任何有效目标"错误。
 
 #### 4.1.1 `Initialize()`
@@ -147,7 +149,7 @@ TShock 在加载插件时调用此方法。插件在此处把两个命令委托�
 
 #### `WGiveCommand(CommandArgs args)`
 
-- **位置**：[bettergive.cs#L51-L87](file:///workspace/bettergive.cs#L51-L87)
+- **位置**：[EnhancedWildcardGivePlugin.cs#L51-L87](file:///workspace/EnhancedWildcardGivePlugin.cs#L51-L87)
 - **参数**：`args.Parameters` 按顺序表示 `<物品...> <目标> <数量>`。
 - **关键约定**：
   - `args.Parameters[Count - 1]` → 数量
@@ -156,7 +158,7 @@ TShock 在加载插件时调用此方法。插件在此处把两个命令委托�
 
 #### `WGBoxCommand(CommandArgs args)`
 
-- **位置**：[bettergive.cs#L89-L157](file:///workspace/bettergive.cs#L89-L157)
+- **位置**：[EnhancedWildcardGivePlugin.cs#L89-L157](file:///workspace/EnhancedWildcardGivePlugin.cs#L89-L157)
 - **参数**：`<目标> <物品...> <数量> [词缀]`。
 - **词缀解析**：当 `Parameters.Count >= 4` 且最后一段可解析为 `byte` 时，视为 `prefix`；否则数量位于最后一段。
 
@@ -164,17 +166,17 @@ TShock 在加载插件时调用此方法。插件在此处把两个命令委托�
 
 #### `TryParsePositiveInt(string text, out int value)`
 
-- **位置**：[bettergive.cs#L159-L163](file:///workspace/bettergive.cs#L159-L163)
+- **位置**：[EnhancedWildcardGivePlugin.cs#L159-L163](file:///workspace/EnhancedWildcardGivePlugin.cs#L159-L163)
 - **语义**：要求数值必须是整数且 `> 0`。
 
 #### `TryResolveSingleItem(TSPlayer player, string itemText, out Item item)`
 
-- **位置**：[bettergive.cs#L165-L191](file:///workspace/bettergive.cs#L165-L191)
+- **位置**：[EnhancedWildcardGivePlugin.cs#L165-L191](file:///workspace/EnhancedWildcardGivePlugin.cs#L165-L191)
 - **行为**：空文本 → 未找到 → 重名 → 精确匹配。
 
 #### `TryResolveTargets(TSPlayer sender, string targetText, out List<TSPlayer> targets)`
 
-- **位置**：[bettergive.cs#L193-L268](file:///workspace/bettergive.cs#L193-L268)
+- **位置**：[EnhancedWildcardGivePlugin.cs#L193-L268](file:///workspace/EnhancedWildcardGivePlugin.cs#L193-L268)
 - **新增逻辑**：
   1. 遍历 token 时记录 `hasAmbiguousMatch`。
   2. 若有任何 token 返回 `Ambiguous` 状态 → 立即终止并给玩家一个**明确的"重名"提示**。
@@ -182,7 +184,7 @@ TShock 在加载插件时调用此方法。插件在此处把两个命令委托�
 
 #### `ResolveTargetToken(TSPlayer sender, string token)`
 
-- **位置**：[bettergive.cs#L270-L320](file:///workspace/bettergive.cs#L270-L320)
+- **位置**：[EnhancedWildcardGivePlugin.cs#L270-L320](file:///workspace/EnhancedWildcardGivePlugin.cs#L270-L320)
 - **返回类型**：`TokenResolveResult`（取代原 `List<TSPlayer>`）。
 - **三种状态**：
   - `Ok` → 正常解析，`Players` 非空。
@@ -193,7 +195,7 @@ TShock 在加载插件时调用此方法。插件在此处把两个命令委托�
 
 #### `TryGiveItem(TSPlayer target, int itemType, int stack, int prefix)`
 
-- **位置**：[bettergive.cs#L322-L337](file:///workspace/bettergive.cs#L322-L337)
+- **位置**：[EnhancedWildcardGivePlugin.cs#L322-L337](file:///workspace/EnhancedWildcardGivePlugin.cs#L322-L337)
 - **改进**：
   - 原 `catch { }` 吞掉了所有异常信息。
   - 现改为 `catch (Exception ex)` 并写入 `TShock.Log.Error`，包含目标玩家名、物品参数和异常消息，便于排错。
@@ -207,7 +209,7 @@ TShock 在加载插件时调用此方法。插件在此处把两个命令委托�
 
 | 依赖 | 用途 | 提供方 |
 | --- | --- | --- |
-| `System`、`System.Collections.Generic`、`System.Linq` | .NET BCL（基础类库） | .NET 6 |
+| `System`、`System.Collections.Generic`、`System.Linq` | .NET BCL（基础类库） | .NET 8 |
 | `Terraria`（`Item`、`Main` 等） | Terraria 游戏对象模型 | Terraria 主程序 |
 | `TerrariaApi.Server`（`TerrariaPlugin`、`ApiVersionAttribute`） | 插件宿主与生命周期 | TShock / OTAPI |
 | `TShockAPI`（`Commands`、`TSPlayer`、`TShock`、`CommandArgs`、`Command`） | 命令系统与玩家对象 | TShock 服务器 |
@@ -310,8 +312,8 @@ EnhancedWildcardGivePlugin
 
 ### 7.1 环境要求
 
-- **开发框架**：.NET 6 / .NET 8 SDK（工程文件已配置 `net6.0`，可按需调整）。
-- **运行时**：TShock 服务器（要求 `TerrariaPlugin` API Version ≥ 2.1，即 TShock 5.x 系列）。
+- **开发框架**：.NET 8 SDK（工程文件配置 `net8.0`，与 TShock 6.1 配套）。
+- **运行时**：TShock 服务器（要求 `TerrariaPlugin` API Version ≥ 2.1，即 TShock 6.1 系列）。
 - **IDE**：Visual Studio / Rider / Visual Studio Code（均可）。
 
 ### 7.2 依赖引用配置
@@ -358,8 +360,8 @@ dotnet build -c Release
 /workspace
 ├── LICENSE                              # 开源许可证
 ├── README.md                            # 项目简介与命令预览
-├── bettergive.cs                        # 插件主程序（~340 行）
-├── bettergive.csproj                    # .NET 工程文件（类库，net6.0）
+├── EnhancedWildcardGivePlugin.cs      # 插件主程序（~340 行）
+├── bettergive.csproj                    # .NET 工程文件（类库，net8.0）
 └── .github/
     └── workflows/
         └── dotnet-desktop.yml           # GitHub Actions CI：类库构建 + 上传 DLL
@@ -377,14 +379,14 @@ dotnet build -c Release
 
 ## 10. 快速索引
 
-- **主类**：[EnhancedWildcardGivePlugin](file:///workspace/bettergive.cs#L11-L338)
-- **命令注册/卸载**：[Initialize](file:///workspace/bettergive.cs#L34-L38)、[Dispose](file:///workspace/bettergive.cs#L40-L49)
-- **/wgive 实现**：[WGiveCommand](file:///workspace/bettergive.cs#L51-L87)
-- **/wgbox 实现**：[WGBoxCommand](file:///workspace/bettergive.cs#L89-L157)
-- **数量解析**：[TryParsePositiveInt](file:///workspace/bettergive.cs#L159-L163)
-- **物品解析**：[TryResolveSingleItem](file:///workspace/bettergive.cs#L165-L191)
-- **目标解析**：[TryResolveTargets](file:///workspace/bettergive.cs#L193-L268)、[ResolveTargetToken](file:///workspace/bettergive.cs#L270-L320)
-- **状态枚举/结构**：[TokenResolveStatus & TokenResolveResult](file:///workspace/bettergive.cs#L22-L28)
-- **发放逻辑（含异常日志）**：[TryGiveItem](file:///workspace/bettergive.cs#L322-L337)
+- **主类**：[EnhancedWildcardGivePlugin](file:///workspace/EnhancedWildcardGivePlugin.cs#L11-L338)
+- **命令注册/卸载**：[Initialize](file:///workspace/EnhancedWildcardGivePlugin.cs#L34-L38)、[Dispose](file:///workspace/EnhancedWildcardGivePlugin.cs#L40-L49)
+- **/wgive 实现**：[WGiveCommand](file:///workspace/EnhancedWildcardGivePlugin.cs#L51-L87)
+- **/wgbox 实现**：[WGBoxCommand](file:///workspace/EnhancedWildcardGivePlugin.cs#L89-L157)
+- **数量解析**：[TryParsePositiveInt](file:///workspace/EnhancedWildcardGivePlugin.cs#L159-L163)
+- **物品解析**：[TryResolveSingleItem](file:///workspace/EnhancedWildcardGivePlugin.cs#L165-L191)
+- **目标解析**：[TryResolveTargets](file:///workspace/EnhancedWildcardGivePlugin.cs#L193-L268)、[ResolveTargetToken](file:///workspace/EnhancedWildcardGivePlugin.cs#L270-L320)
+- **状态枚举/结构**：[TokenResolveStatus & TokenResolveResult](file:///workspace/EnhancedWildcardGivePlugin.cs#L22-L28)
+- **发放逻辑（含异常日志）**：[TryGiveItem](file:///workspace/EnhancedWildcardGivePlugin.cs#L322-L337)
 - **工程文件**：[bettergive.csproj](file:///workspace/bettergive.csproj)
 - **CI 配置**：[dotnet-desktop.yml](file:///workspace/.github/workflows/dotnet-desktop.yml)
